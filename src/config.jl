@@ -11,7 +11,8 @@ using Serialization
 const datasets_dir = "datasets"
 
 const datasets = [
-    (name="VocabIQ", value="vocabiq", get=() -> deserialize(datasets_dir * "/vocabiq.jls")),
+    (name="VocabIQ 4PL 1-dimensional", value="vocabiq_4pl_1d", get=() -> deserialize(datasets_dir * "/vocabiq_4pl_1d.jls")),
+    (name="VocabIQ Kernel-Smoothing IRT", value="vocabiq_ksirt", get=() -> deserialize(datasets_dir * "/vocabiq_ksirt.jls")),
 ]
 
 const ability_estimation_distribution = [

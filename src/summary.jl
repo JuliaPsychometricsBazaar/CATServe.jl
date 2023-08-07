@@ -1,10 +1,18 @@
+function safe_params(item_bank, idx)
+    if hasmethod(item_params, Tuple{typeof(item_bank), typeof(idx)})
+        item_params(item_bank, idx)
+    else
+        ""
+    end
+end
+
 function format_item_question(idx, item_bank, question, tracked_responses, ability_estimator, response_dict)
     exp_resp = Aggregators.response_expectation(
         ability_estimator,
         tracked_responses,
         idx
     )
-    @htl """<tr>$(tds(idx, item_params(item_bank, idx), summarise_task(question), get(response_dict, idx, "N/A"), exp_resp))</tr>"""
+    @htl """<tr>$(tds(idx, safe_params(item_bank, idx), summarise_task(question), get(response_dict, idx, "N/A"), string(exp_resp)))</tr>"""
 end
 
 function result_summary(question_bank, ability_estimator, tracked)
@@ -18,7 +26,7 @@ function result_summary(question_bank, ability_estimator, tracked)
             <div>
                 Ability: $(ability)
             </div>
-            <div class="sunken-panel" style="height: 120px; width: 240px;">
+            <div class="sunken-panel" style="height: 600px; width: 800px;">
                 <table>
                     <caption>Question item parameters/predictions</caption>
                     <thead>
