@@ -1,3 +1,5 @@
+module CATServe
+
 using Oxygen
 using Oxygen.Core: stream_handler
 using HypertextLiteral
@@ -13,25 +15,29 @@ using FittedItemBanks: ResponseType, item_params
 using ComputerAdaptiveTesting.Responses
 using ComputerAdaptiveTesting.Aggregators: TrackedResponses, add_response!
 
+export serve_cat
+
 include("./utils.jl")
 include("./summary.jl")
 include("./config.jl")
 include("./templates.jl")
 
-@get "/" function index()
-    html_resp(index_tmpl())
-end
+function __init__()
+    @get "/" function index()
+        html_resp(index_tmpl())
+    end
 
-@get "/test" function test(req)
-    query = HTTP.URI(req.target).query
-    @info "test" queryparams(req) query
+    @get "/test" function test(req)
+        query = HTTP.URI(req.target).query
+        @info "test" queryparams(req) query
 
-    html_resp(test_tmpl(query))
-end
+        html_resp(test_tmpl(query))
+    end
 
-@get "/test-ws" function test_ws(req)
-    # TODO return forbidden/upgrade required
-    @info "middleware failed" req
+    @get "/test-ws" function test_ws(req)
+        # TODO return forbidden/upgrade required
+        @info "middleware failed" req
+    end
 end
 
 function cat_rules_from_params(params, descget)
@@ -192,6 +198,12 @@ function ws_handler(middleware::Function)
     end
 end
 
-if abspath(PROGRAM_FILE) == @__FILE__
+function serve_cat(port=8001)
     serve(port=8001, handler=ws_handler)
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    serve_cat()
+end
+
 end

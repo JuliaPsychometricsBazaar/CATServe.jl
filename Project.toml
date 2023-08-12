@@ -1,3 +1,8 @@
+name = "CATServe"
+uuid = "4683e2c8-202b-4006-a610-3ba695e94b9b"
+authors = ["Frankie Robertson"]
+version = "0.1.0"
+
 [deps]
 ComputerAdaptiveTesting = "5a0d4f34-1f62-4a66-80fe-87aba0485488"
 FittedItemBanks = "3f797b09-34e4-41d7-acf6-3302ae3248a5"
@@ -8,3 +13,5 @@ JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
 PsychometricsBazaarBase = "b0d9cada-d963-45e9-a4c6-4746243987f1"
 RIrtWrappers = "3c499bf4-8795-40ff-83c0-5639be88f347"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
