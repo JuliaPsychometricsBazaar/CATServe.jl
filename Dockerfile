@@ -1,6 +1,14 @@
-FROM julia:1.9-bookworm
+FROM --platform=linux/amd64 julia:1.9-bookworm
 
-COPY compiled/sysimg.so /usr/local/lib/julia/sys.so
-COPY run.jl /run.jl
+ENV JULIA_CPU_TARGET generic;sandybridge,-xsaveopt,clone_all;haswell,-rdrnd,base(1)
 
-CMD ["julia", "/run.jl"]
+RUN mkdir /app
+COPY . /app
+WORKDIR /app
+
+EXPOSE 8001
+
+RUN julia -e "using Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile(); "
+RUN julia --project=. setup_rcondapkg.jl
+
+CMD ["/app/bin/server"]

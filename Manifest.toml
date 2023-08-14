@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "269b1d422d8fd9de5331db846d3c816e3f1a5084"
+project_hash = "63fd13581e46d067c686963678064d858bf0b50c"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -936,9 +936,11 @@ version = "0.2.9"
 
 [[deps.RCall]]
 deps = ["CategoricalArrays", "Conda", "DataFrames", "DataStructures", "Dates", "Libdl", "Missings", "REPL", "Random", "Requires", "StatsModels", "WinReg"]
-git-tree-sha1 = "d9310ed05c2ff94c4e3a545a0e4c58ed36496179"
+git-tree-sha1 = "c0cbc8173a6782e19df785a6a12ddfd9e0c31ca7"
+repo-rev = "master"
+repo-url = "https://github.com/frankier/RCall.jl.git#preferences-r-installation"
 uuid = "6f49c342-dc21-5d91-9882-a32aef131414"
-version = "0.13.16"
+version = "0.13.15"
 
 [[deps.RData]]
 deps = ["CategoricalArrays", "CodecZlib", "DataFrames", "Dates", "FileIO", "Requires", "TimeZones", "Unicode"]
