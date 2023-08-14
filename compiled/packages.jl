@@ -4,5 +4,6 @@ const PACKAGES = [
   "ComputerAdaptiveTesting",
   "HypertextLiteral",
   "ItemResponseDatasets",
-  "RIrtWrappers",
+  # Do not precompile because it requires R at compilation time
+  #"RIrtWrappers",
 ]
