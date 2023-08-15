@@ -18,5 +18,6 @@ EXPOSE 8001
 
 RUN julia -e "using Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile(); "
 RUN julia --project=. setup_rcondapkg.jl
+RUN julia -e "using Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile(); "
 
 CMD ["/app/bin/server"]
