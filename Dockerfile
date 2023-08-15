@@ -6,13 +6,12 @@ RUN mkdir /app
 COPY \
 	Manifest.toml \
 	Project.toml \
-	bin/ \
 	preprocess_item_banks.jl \
 	run.jl \
 	setup_rcondapkg.jl \
-	src/ \
-	compiled/ \
 	/app/
+COPY bin/ /app/bin/
+COPY src/ /app/src/
 WORKDIR /app
 
 EXPOSE 8001
