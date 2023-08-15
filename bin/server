@@ -1,0 +1,1 @@
+julia --color=yes --depwarn=no --project=@. -q -i -- $(dirname $0)/../run.jl -s=true "$@"
