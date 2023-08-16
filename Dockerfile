@@ -2,6 +2,8 @@ FROM --platform=linux/amd64 julia:1.9-bookworm
 
 ENV JULIA_CPU_TARGET generic;sandybridge,-xsaveopt,clone_all;haswell,-rdrnd,base(1)
 
+RUN apt-get update && apt-get install libgl1-mesa-glx -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir /app
 COPY \
 	Manifest.toml \
