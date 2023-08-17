@@ -24,4 +24,8 @@ RUN julia --project=. setup_rcondapkg.jl
 RUN julia -e "using Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile(); "
 RUN julia --project=. preprocess_item_banks.jl
 
+# Set group permissions equal to user so OpenShift can use its root group
+# membership to write when needed
+RUN chmod -R g=u /julia /appt
+
 CMD ["/app/bin/server"]
