@@ -26,6 +26,6 @@ RUN julia --project=. preprocess_item_banks.jl
 
 # Set group permissions equal to user so OpenShift can use its root group
 # membership to write when needed
-RUN chmod -R g=u /julia /appt
+RUN chmod -R g=u /julia /app
 
 CMD ["/app/bin/server"]
