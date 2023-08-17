@@ -28,4 +28,4 @@ RUN julia --project=. preprocess_item_banks.jl
 # membership to write when needed
 RUN chmod -R g=u /julia /app
 
-CMD ["/app/bin/server"]
+CMD ["/app/bin/server", "0.0.0.0", "8001"]

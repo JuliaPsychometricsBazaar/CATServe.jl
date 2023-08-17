@@ -198,8 +198,8 @@ function ws_handler(middleware::Function)
     end
 end
 
-function serve_cat(port=8001)
-    serve(port=8001, handler=ws_handler)
+function serve_cat(; kwargs...)
+    serve(middleware=[], handler=ws_handler; kwargs...)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
