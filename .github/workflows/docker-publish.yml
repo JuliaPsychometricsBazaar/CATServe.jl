@@ -35,4 +35,4 @@ jobs:
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           push: true
-          tags: ghcr.io/JuliaPsychometricsBazaar/catserve:latest
+          tags: ghcr.io/juliapsychometricsbazaar/catserve:latest
