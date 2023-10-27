@@ -31,6 +31,11 @@ page_base(title, body, extra_heads=[]) =  @htl("""
     <link rel="stylesheet" href="https://unpkg.com/98.css" />
     <script src="https://unpkg.com/htmx.org@1.9.4"></script>
     <script src="https://unpkg.com/htmx.org@1.9.4/dist/ext/ws.js"></script>
+    <style>
+    .mt-1 {
+      margin-top: 1em;
+    }
+    </style>
     $(validate_choose_exact_snippet)
     $((extra_head for extra_head in extra_heads))
   </head>
@@ -81,68 +86,91 @@ index_tmpl() = page_base(
             </optgroup>
           </select>
         </fieldset>
-        <fieldset>
+        <fieldset class="mt-1">
           <legend>CAT setup</legend>
           <fieldset>
             <legend>Ability estimation</legend>
-            <label>
-              Distribution
+            <div class="field-row-stacked">
+              <label for="abildist">
+                Distribution
+              </label>
               <select name="abildist">
                 $((option(distribution) for distribution in ability_estimation_distribution))
               </select>
-            </label><br>
-            <label>
-              Estimation
+            </div>
+            <div class="field-row-stacked">
+              <label for="abilest">
+                Estimation
+              </label>
               <select name="abilest">
                 $((option(estimation) for estimation in ability_estimation))
               </select>
-            </label><br>
-            <label>
-              Integrator / optimizer lower bound
+            </div>
+            <div class="field-row-stacked">
+              <label for="lower_bound">
+                Integrator / optimizer lower bound
+              </label>
               <input type="number" name="lower_bound">
-            </label><br>
-            <label>
-              Integrator / optimizer upper bound
+            </div>
+            <div class="field-row-stacked">
+              <label for="upper_bound">
+                Integrator / optimizer upper bound
+              </label>
               <input type="number" name="upper_bound">
-            </label><br>
-            <label>
-              Integrator
+            </div>
+            <div class="field-row-stacked">
+              <label for="integrator">
+                Integrator
+              </label>
               <select name="integrator">
                 $((option(integrator) for integrator in integrators))
               </select>
-            </label><br>
-            <label>
-              Integrator order
+            </div>
+            <div class="field-row-stacked">
+              <label for="integrator_order">
+                Integrator order
+              </label>
               <input type="number" name="integrator_order">
-            </label><br>
-            <label>
-              Optimizer
+            </div>
+            <div class="field-row-stacked">
+              <label for="optimizer">
+                Optimizer
+              </label>
               <select name="optimizer">
                 $((option(optimizer) for optimizer in optimizers))
               </select>
-            </label><br>
-            <label>
-              Next item rule
+            </div>
+          </fieldset>
+          <fieldset class="mt-1">
+            <legend>Next item</legend>
+            <div class="field-row-stacked">
+              <label for="nextitem">
+                Next item rule
+              </label>
               <select name="nextitem">
                 $((option(next_item_rule) for next_item_rule in next_item_rules))
               </select>
-            </label>
-            <label>
-              Termination condition
+            </div>
+          </fieldset>
+          <fieldset class="mt-1">
+            <legend>Termination</legend>
+            <div class="field-row-stacked">
+              <label for="termcond">
+                Termination condition
+              </label>
               <select name="termcond">
                 $((option(termination_condition) for termination_condition in termination_conditions))
               </select>
-            </label>
-            <label>
-              Number of items
+            </div>
+            <div class="field-row-stacked">
+              <label for="nitems">
+                Number of items
+              </label>
               <input type="number" name="nitems">
-            </label>
-          </fieldset>
-          <fieldset>
-            <legend></legend>
+            <div>
           </fieldset>
         </fieldset>
-        <section class="field-row" style="justify-content: flex-end">
+        <section class="field-row" class="mt-1" style="justify-content: flex-end">
           <input value="OK" type="submit">
           <button>Cancel</button>
         </section>
