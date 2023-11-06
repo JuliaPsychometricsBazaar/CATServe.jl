@@ -24,6 +24,7 @@ htmx.on(
 </script>
 """)
 
+# XXX doctype
 page_base(title, body, extra_heads=[]) =  @htl("""
 <html>
   <head>
@@ -31,9 +32,13 @@ page_base(title, body, extra_heads=[]) =  @htl("""
     <link rel="stylesheet" href="https://unpkg.com/98.css" />
     <script src="https://unpkg.com/htmx.org@1.9.4"></script>
     <script src="https://unpkg.com/htmx.org@1.9.4/dist/ext/ws.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.2" defer></script>
     <style>
     .mt-1 {
       margin-top: 1em;
+    }
+    .min-h-5 {
+      min-height: 5em;
     }
     </style>
     $(validate_choose_exact_snippet)
@@ -69,11 +74,11 @@ option(opt) = @htl("""
 """)
 
 index_tmpl() = page_base(
-  "wats ur fav cat?",
+  "Computer-Adaptive Test Demo Configuration",
   window(
-    "wats ur fav cat?",
+    "Computer-Adaptive Test Demo Configuration",
     @htl("""
-      <form action="/test" method="get">
+      <form name="catconfig" action="/test" method="get" x-data="{f: {}}">
         <fieldset>
           <legend>Test selection</legend>
           <select name="test">
@@ -82,93 +87,47 @@ index_tmpl() = page_base(
               <option>Clumpy generator</option>
             </optgroup>
             <optgroup label="Datasets">
-              $((option(dataset) for dataset in datasets))
+              $( render_options(datasets) )
             </optgroup>
           </select>
         </fieldset>
         <fieldset class="mt-1">
-          <legend>CAT setup</legend>
+          <legend>CAT Procedure</legend>
           <fieldset>
             <legend>Ability estimation</legend>
-            <div class="field-row-stacked">
-              <label for="abildist">
-                Distribution
+            $( render_stacked(ability_estimation_distribution) )
+            $( render_stacked(ability_estimation) )
+            $( render_stacked(form.lower_bound) )
+            $( render_stacked(form.upper_bound) )
+            $( render_stacked(integrators) )
+            <div class="field-row-stacked" x-show="f.integrator == 'evengrid'">
+              <label for="abiltrack">
+                Ability tracker
               </label>
-              <select name="abildist">
-                $((option(distribution) for distribution in ability_estimation_distribution))
+              <select name="abiltrack">
+                $( render_options(ability_tracker) )
               </select>
             </div>
-            <div class="field-row-stacked">
-              <label for="abilest">
-                Estimation
-              </label>
-              <select name="abilest">
-                $((option(estimation) for estimation in ability_estimation))
-              </select>
-            </div>
-            <div class="field-row-stacked">
-              <label for="lower_bound">
-                Integrator / optimizer lower bound
-              </label>
-              <input type="number" name="lower_bound">
-            </div>
-            <div class="field-row-stacked">
-              <label for="upper_bound">
-                Integrator / optimizer upper bound
-              </label>
-              <input type="number" name="upper_bound">
-            </div>
-            <div class="field-row-stacked">
-              <label for="integrator">
-                Integrator
-              </label>
-              <select name="integrator">
-                $((option(integrator) for integrator in integrators))
-              </select>
-            </div>
-            <div class="field-row-stacked">
-              <label for="integrator_order">
-                Integrator order
-              </label>
-              <input type="number" name="integrator_order">
-            </div>
-            <div class="field-row-stacked">
-              <label for="optimizer">
-                Optimizer
-              </label>
-              <select name="optimizer">
-                $((option(optimizer) for optimizer in optimizers))
-              </select>
-            </div>
+            $( render_stacked(form.integrator_order) )
+            $( render_stacked(optimizers) )
           </fieldset>
           <fieldset class="mt-1">
             <legend>Next item</legend>
-            <div class="field-row-stacked">
-              <label for="nextitem">
-                Next item rule
-              </label>
-              <select name="nextitem">
-                $((option(next_item_rule) for next_item_rule in next_item_rules))
-              </select>
-            </div>
+            $( render_stacked(next_item_rules) )
           </fieldset>
           <fieldset class="mt-1">
             <legend>Termination</legend>
-            <div class="field-row-stacked">
-              <label for="termcond">
-                Termination condition
-              </label>
-              <select name="termcond">
-                $((option(termination_condition) for termination_condition in termination_conditions))
-              </select>
-            </div>
-            <div class="field-row-stacked">
-              <label for="nitems">
-                Number of items
-              </label>
-              <input type="number" name="nitems">
-            <div>
+            $( render_stacked(termination_conditions) )
+            $( render_stacked(form.nitems) )
           </fieldset>
+        </fieldset>
+        <fieldset class="mt-1">
+          <legend>Display</legend>
+          $( render_row(form.ability_end) )
+          $( render_row(form.results_end) )
+          $( render_row(form.record) )
+          $( render_row(form.results_cont) )
+          $( render_row(form.answer_cont) )
         </fieldset>
         <section class="field-row" class="mt-1" style="justify-content: flex-end">
           <input value="OK" type="submit">
@@ -181,11 +140,11 @@ index_tmpl() = page_base(
 )
 
 test_tmpl(query) = page_base(
-  "doin tha cat",
+  "Running Computer-Adaptive Test Demo",
   window(
-    "doin tha cat",
+    "Running Computer-Adaptive Test Demo",
     @htl("""
-      <div hx-ext="ws" ws-connect="/test-ws?$(query)" id="window">
+      <div hx-ext="ws" ws-connect="/test-ws?$(query)" id="window" class="min-h-5">
         <form id="form" ws-send>
           <div id="progress"></div>
           <div id="info"></div>

@@ -14,11 +14,15 @@ using ItemResponseDatasets: SelectMultipleExact, SelectMultiplePartial, SelectMu
 using FittedItemBanks: ResponseType, item_params
 using ComputerAdaptiveTesting.Responses
 using ComputerAdaptiveTesting.Aggregators: TrackedResponses, add_response!
+using ComputerAdaptiveTesting.Sim: NextItemError
+using FittedItemBanks: BooleanResponse
+using CATPlots: CatRecorder, lh_evolution_interactive
 
 export serve_cat
 
 include("./utils.jl")
 include("./summary.jl")
+include("./widgets.jl")
 include("./config.jl")
 include("./templates.jl")
 
@@ -40,38 +44,55 @@ function __init__()
     end
 end
 
-function cat_rules_from_params(params, descget)
-    abildist = descget(ability_estimation_distribution, "abildist")
-    abilest = descget(ability_estimation, "abilest")
-    lower_bound = tryparse(Float64, params["lower_bound"])
-    upper_bound = tryparse(Float64, params["upper_bound"])
-    order = tryparse(UInt64, params["integrator_order"])
-    integrator = descget(integrators, "integrator", lower_bound, upper_bound, order)
-    optimizer = descget(optimizers, "optimizer", lower_bound, upper_bound)
+function parse_cat_rules(parse)
+    abildist = parse(ability_estimation_distribution)
+    abilest = parse(ability_estimation)
+    lower_bound = parse(form.lower_bound)
+    upper_bound = parse(form.upper_bound)
+    order = parse(form.integrator_order)
+    integrator = parse(integrators, lower_bound, upper_bound, order)
+    optimizer = parse(optimizers, lower_bound, upper_bound)
     full_abilest = PointAbilityEstimator(abilest, abildist, integrator, optimizer)
-    next_item_rule = descget(next_item_rules, "nextitem", full_abilest, abildist, integrator, optimizer)
-    nitems = tryparse(UInt64, params["nitems"])
-    termination_condition = descget(termination_conditions, "termcond", nitems)
+    next_item_rule = parse(next_item_rules, full_abilest, abildist, integrator, optimizer)
+    nitems = parse(form.nitems)
+    termination_condition = parse(termination_conditions, nitems)
     @info "stuff" abilest abildist full_abilest next_item_rule termination_condition integrator optimizer
     ComputerAdaptiveTesting.CatRules(full_abilest, next_item_rule, termination_condition)
 end
 
-function question_progress(ws, question_idx, termination_condition::FixedItemsTerminationCondition)
-    send(ws, "<div id='info'>$(question_idx)/$(termination_condition.num_items)</div>")
+function question_progress(question_idx, termination_condition::FixedItemsTerminationCondition)
+    "$(question_idx)/$(termination_condition.num_items)"
 end
 
-function question_progress(ws, question_idx, termination_condition)
-    send(ws, "<div id='info'>$(question_idx)/?</div>")
+function question_progress(question_idx, termination_condition)
+    "$(question_idx)/?"
 end
 
-function run_cat_ws(ws, rules, item_bank, question_bank)
+format_response(::BooleanResponse, value) = value ? "Correct" : "Incorrect"
+
+max_responses(item_bank, termination_condition::FixedItemsTerminationCondition) = termination_condition.num_items
+max_responses(item_bank, termination_condition) = length(item_bank)
+
+function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)
     (; next_item, termination_condition, ability_estimator, ability_tracker) = rules
     responses = TrackedResponses(
         BareResponses(ResponseType(item_bank)),
         item_bank,
         ability_tracker
     )
+    if display_prefs.record
+        xs = range(-2.5, 2.5, length=100)
+        integrator = QuadGKIntegrator(-6.0, 6.0, 7)
+        dist_ability_est = PriorAbilityEstimator(std_normal)
+        ability_estimator = MeanAbilityEstimator(dist_ability_est, integrator)
+        raw_estimator = LikelihoodAbilityEstimator()
+        recorder = CatRecorder(xs, max_responses(item_bank, termination_condition), integrator, raw_estimator, ability_estimator)
+    else
+        recorder = nothing
+    end
+    response_type = ResponseType(item_bank)
     question_idx = 1
+    response = nothing
     while true
         local next_index
         try
@@ -84,20 +105,27 @@ function run_cat_ws(ws, rules, item_bank, question_bank)
                 rethrow()
             end
         end
-        question_progress(ws, question_idx, termination_condition)
+        prog = question_progress(question_idx, termination_condition)
+        if display_prefs.results_cont && response !== nothing
+            formatted_response = format_response(response_type, response)
+            send(ws, "<div id='info'>$(formatted_response)<br>$(prog)</div>")
+        else
+            send(ws, "<div id='info'>$(prog)</div>")
+        end
         response = prompt_ws(ws, question_bank[next_index])
         @info "Got response" response
-        add_response!(responses, Response(ResponseType(item_bank), next_index, response))
+        add_response!(responses, Response(response_type, next_index, response))
         terminating = termination_condition(responses, item_bank)
+        recorder(responses, 1, terminating)
         if terminating
             @info "Met termination condition"
             break
         end
         question_idx += 1
     end
-    response = html_ws(result_summary(question_bank, ability_estimator, responses))
-    @info "summary" response
-    send(ws, response)
+    summary_page = html_ws(result_summary(question_bank, ability_estimator, responses, display_prefs; recorder=recorder))
+    @info "summary" summary_page
+    send(ws, summary_page)
 end
 
 function prompt_ws(ws, task::PromptedTask)
@@ -176,10 +204,18 @@ end
 function handle_ws(ws)
     params = queryparams(ws.request)
     log(msg) = send(ws, "<div id='info'>" * msg * "</div>")
-    descget = mk_descget(params)
-    dataset, question_bank = descget(datasets, "test")
-    cat_rules = cat_rules_from_params(params, descget)
-    run_cat_ws(ws, cat_rules, dataset, question_bank)
+    #descget = mk_descget(params)
+    parse = ParamParser(params)
+    dataset, question_bank = parse(datasets)
+    cat_rules = parse_cat_rules(parse)
+    display_prefs = (
+        ability_end = parse(form.ability_end),
+        results_end = parse(form.results_end),
+        record = parse(form.record),
+        results_cont = parse(form.results_cont),
+        answer_cont = parse(form.answer_cont),
+    )
+    run_cat_ws(ws, cat_rules, dataset, question_bank, display_prefs)
 end
 
 function ws_handler(middleware::Function)
@@ -199,7 +235,7 @@ function ws_handler(middleware::Function)
 end
 
 function serve_cat(; kwargs...)
-    serve(middleware=[], handler=ws_handler; kwargs...)
+    serve(middleware=[], handler=ws_handler; async=true, kwargs...)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
