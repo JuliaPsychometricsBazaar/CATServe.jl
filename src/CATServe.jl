@@ -159,48 +159,6 @@ function prompt_ws(ws, task::SelectMultiplePartial)
     resp = iterate(ws)
 end
 
-#=
-function prompt_readline(task::SelectMultipleExact)
-    options = answers(task)
-    options_fmt = join(options, "/")
-    responses = Set()
-    for idx in 1:length(task.correct)
-        while true
-            print("$idx/$(length(task.correct)): $options_fmt (blank = do not know) > ")
-            word = readline()
-            if strip(word) == ""
-                return 0
-            end
-            if word in options
-                push!(responses, word)
-                break
-            end
-            println("Could not find $word in $options_fmt")
-        end
-    end
-    return responses == task.correct ? 1 : 0
-end
-
-function prompt_readline(task::SelectMultiplePartial)
-    options = answers(task)
-    options_fmt = join(options, "/")
-    responses = Set()
-    while true
-        print("$options_fmt (blank = finished) > ")
-        word = readline()
-        if strip(word) == ""
-            break
-        end
-        if word in options
-            push(responses, word)
-        else
-            println("Could not find $word in $options_fmt")
-        end
-    end
-    return (length(intersect(task.correct, responses)), length(intersect(task.incorrect, responses)))
-end
-=#
-
 function handle_ws(ws)
     params = queryparams(ws.request)
     log(msg) = send(ws, "<div id='info'>" * msg * "</div>")
