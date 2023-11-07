@@ -1,16 +1,3 @@
-const validate_choose_exact_snippet = @htl("""
-<script>
-addEventListener("load", (event) => {
-  let forms = document.querySelectorAll("form");
-  for (let form of forms) {
-    form.addEventListener("htmx:validation:validate", (event) => {
-      
-    })
-  }
-});
-</script>
-""")
-
 const restart_on_disconnect_snippet = @htl("""
 <script>
 htmx.on(
@@ -41,7 +28,6 @@ page_base(title, body, extra_heads=[]) =  @htl("""
       min-height: 5em;
     }
     </style>
-    $(validate_choose_exact_snippet)
     $((extra_head for extra_head in extra_heads))
   </head>
   <body>
