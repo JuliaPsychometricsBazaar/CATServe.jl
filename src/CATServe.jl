@@ -16,7 +16,7 @@ using ComputerAdaptiveTesting.Responses
 using ComputerAdaptiveTesting.Aggregators: TrackedResponses, add_response!
 using ComputerAdaptiveTesting.Sim: NextItemError
 using FittedItemBanks: BooleanResponse
-using CATPlots: CatRecorder, lh_evolution_interactive
+using AdaptiveTestPlots: CatRecorder, lh_evolution_interactive
 
 export serve_cat
 

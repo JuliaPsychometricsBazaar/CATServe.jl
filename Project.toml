@@ -4,7 +4,7 @@ authors = ["Frankie Robertson"]
 version = "0.1.0"
 
 [deps]
-CATPlots = "d194c7c1-4081-4169-ba52-101f65b44e42"
+AdaptiveTestPlots = "d194c7c1-4081-4169-ba52-101f65b44e42"
 ComputerAdaptiveTesting = "5a0d4f34-1f62-4a66-80fe-87aba0485488"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 FittedItemBanks = "3f797b09-34e4-41d7-acf6-3302ae3248a5"
