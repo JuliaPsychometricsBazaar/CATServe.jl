@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Running Computer-Adaptive Test Demo{% endblock %}
+
+{% block extra_head %}{% endblock %}
+
+{% block main %}
+  <div class="window" style="margin: 32px; width: 800px">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        Running Computer-Adaptive Test Demo
+      </div>
+
+      <div class="title-bar-controls">
+        <button aria-label="Minimize"></button>
+        <button aria-label="Maximize"></button>
+        <button aria-label="Close"></button>
+      </div>
+    </div>
+    <div class="window-body">
+      <div hx-ext="ws" ws-connect="/test-ws?{{ query }}" id="window" class="min-h-5">
+        <form id="form" ws-send>
+          <div id="progress"></div>
+          <div id="info"></div>
+          <div id="question"></div>
+          <div id="response"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

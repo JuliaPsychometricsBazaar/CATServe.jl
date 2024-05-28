@@ -1,8 +1,7 @@
 module CATServe
 
-using Oxygen
+using Oxygen; @oxidise
 using Oxygen.Core: stream_handler
-using HypertextLiteral
 using HTTP
 using HTTP.WebSockets
 using HTTP.WebSockets: upgrade
@@ -20,29 +19,64 @@ using AdaptiveTestPlots: CatRecorder, lh_evolution_interactive
 
 export serve_cat
 
+include("./otera.jl")
+using .OteraEngineTemplating: otera
 include("./utils.jl")
 include("./summary.jl")
 include("./widgets.jl")
 include("./config.jl")
 include("./templates.jl")
 
-function __init__()
-    @get "/" function index()
-        html_resp(index_tmpl())
-    end
+const TEMPLATE_DIR::String = dirname(Base.source_path()) * "/../templates/"
+templates::Dict{String, Any} = Dict()
 
-    @get "/test" function test(req)
-        query = HTTP.URI(req.target).query
-        @info "test" queryparams(req) query
-
-        html_resp(test_tmpl(query))
-    end
-
-    @get "/test-ws" function test_ws(req)
-        # TODO return forbidden/upgrade required
-        @info "middleware failed" req
+function update_templates()
+    for fn in readdir(TEMPLATE_DIR)
+        path = TEMPLATE_DIR * fn
+        if !(isfile(path) && endswith(fn, ".html"))
+            continue
+        end
+        @info "xx" path
+        template_compiled = otera(path; config=Dict("dir" => TEMPLATE_DIR))
+        templates[fn] = template_compiled
     end
 end
+
+update_templates()
+
+#function __init__()
+@get "/" function index()
+    return templates["index.html"](
+        init=Dict(
+            "render_stacked" => render_stacked,
+            "render_row" => render_row,
+            "form" => form,
+            "render_options" => render_options,
+            "datasets" => datasets,
+            "ability_estimation_distribution" => ability_estimation_distribution,
+            "ability_estimation" => ability_estimation,
+            "ability_tracker" => ability_tracker,
+            "next_item_rules" => next_item_rules,
+            "termination_conditions" => termination_conditions,
+            "integrators" => integrators,
+            "optimizers" => optimizers,
+        )
+    )
+end
+
+@get "/test" function test(req)
+    query = HTTP.URI(req.target).query
+    @info "test" queryparams(req) query
+
+    return templates["test.html"](init=Dict("query" => query))
+end
+
+@get "/test-ws" function test_ws(req)
+    # TODO return forbidden/upgrade required
+    @info "middleware failed" req
+end
+
+#end
 
 function parse_cat_rules(parse)
     abildist = parse(ability_estimation_distribution)
@@ -114,16 +148,18 @@ function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)
         end
         response = prompt_ws(ws, question_bank[next_index])
         @info "Got response" response
-        add_response!(responses, Response(response_type, next_index, response))
+        add_response!(responses, ComputerAdaptiveTesting.Responses.Response(response_type, next_index, response))
         terminating = termination_condition(responses, item_bank)
-        recorder(responses, 1, terminating)
+        if recorder !== nothing
+            recorder(responses, 1, terminating)
+        end
         if terminating
             @info "Met termination condition"
             break
         end
         question_idx += 1
     end
-    summary_page = html_ws(result_summary(question_bank, ability_estimator, responses, display_prefs; recorder=recorder))
+    summary_page = result_summary(question_bank, ability_estimator, responses, display_prefs; recorder=recorder)
     @info "summary" summary_page
     send(ws, summary_page)
 end
@@ -135,14 +171,15 @@ function prompt_ws(ws, task::PromptedTask)
 end
 
 function prompt_ws(ws, task::SelectMultipleExact)
-    answer_html = html_ws(@htl("""
+    answer_html = """
         <div id="response">
             $(exact_checkboxes("answer", answers(task)))
             $(submit_cancel_buttons)
         </div>
-    """))
+    """
     send(ws, answer_html)
-    resp_str, _ = iterate(ws)
+    resp_str = receive(ws)
+    #resp_str, _ = iterate(ws)
     resp = JSON3.read(resp_str)
     if resp[:action] != "Answer"
         return false
@@ -152,10 +189,8 @@ function prompt_ws(ws, task::SelectMultipleExact)
 end
 
 function prompt_ws(ws, task::SelectMultiplePartial)
-    send(
-        ws,
-        html_ws(partial_checkboxes("answer", answers(task)))
-    )
+    html = partial_checkboxes("answer", answers(task))
+    send(ws, html)
     resp = iterate(ws)
 end
 
@@ -164,7 +199,12 @@ function handle_ws(ws)
     log(msg) = send(ws, "<div id='info'>" * msg * "</div>")
     #descget = mk_descget(params)
     parse = ParamParser(params)
-    dataset, question_bank = parse(datasets)
+    datasets_parsed = parse(datasets)
+    if datasets_parsed === nothing
+        send(ws, "<div id='info'>Error parsing datasets</div>")
+        return
+    end
+    dataset, question_bank = datasets_parsed 
     cat_rules = parse_cat_rules(parse)
     display_prefs = (
         ability_end = parse(form.ability_end),
@@ -192,12 +232,14 @@ function ws_handler(middleware::Function)
     end
 end
 
+#=
 function serve_cat(; kwargs...)
-    serve(middleware=[], handler=ws_handler; async=true, kwargs...)
+    serve(middleware=[], handler=ws_handler; kwargs...)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     serve_cat()
 end
+=#
 
 end

@@ -6,11 +6,11 @@
 end
 
 function render_options(obj::SelectWidget)
-    return @htl "$((option(val) for val in obj.options))"
+    return join((option(val) for val in obj.options), "\n")
 end
 
 function render_stacked(obj::SelectWidget)
-    return @htl """
+    return """
     <div class="field-row-stacked">
       <label for="$( obj.name )">
         $( obj.label )
@@ -29,7 +29,7 @@ end
 end
 
 function render_stacked(obj::NumberWidget)
-    return @htl """
+    return """
     <div class="field-row-stacked">
       <label for="$( obj.name )">
         $( obj.label )
@@ -47,14 +47,14 @@ end
 
 function to_checked(val)
     if val
-        return "checked" => "true"
+        return "checked"
     else
-        return nothing
+        return ""
     end
 end
 
 function render_row(obj::CheckBoxWidget)
-    return @htl """
+    return """
     <div class="field-row">
       <input type="checkbox" id="$( obj.name )" name="$( obj.name )" $( to_checked(obj.default) )>
       <label for="$( obj.name )">
@@ -77,11 +77,17 @@ end
 
 function (parse::ParamParser)(conf::AbstractVector, name, args...; kwargs...)
     desc = confget(conf, parse.params[name])
+    if desc === nothing
+        return nothing
+    end
     desc.get(args...; kwargs...)
 end
 
 function (parse::ParamParser)(conf::SelectWidget, args...; kwargs...)
     desc = confget(conf.options, parse.params[conf.name])
+    if desc === nothing
+        return nothing
+    end
     desc.get(args...; kwargs...)
 end
 
