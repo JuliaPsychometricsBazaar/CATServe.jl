@@ -184,6 +184,9 @@ function prompt_ws(ws, task::SelectMultipleExact)
     if resp[:action] != "Answer"
         return false
     end
+    if !haskey(resp, "answer")
+        return false
+    end
     response_answers = Set(resp["answer"])
     return response_answers == task.correct
 end
