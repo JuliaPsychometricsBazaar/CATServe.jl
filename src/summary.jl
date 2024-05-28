@@ -63,7 +63,8 @@ function get_playback(question_bank, ability_estimator, tracked, display_prefs; 
     app = App() do session::Session
         lh_evolution_interactive(recorder)
     end
-    return app
+    app_html = sprint(io-> show(io, MIME"text/html"(), app))
+    return app_html
 end
 
 
