@@ -1,6 +1,7 @@
 module CATServe
 
-using Oxygen; @oxidise
+using Oxygen
+@oxidise
 using Oxygen.Core: stream_handler
 using HTTP
 using HTTP.WebSockets
