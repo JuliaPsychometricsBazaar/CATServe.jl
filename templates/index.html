@@ -65,11 +65,17 @@
         </fieldset>
         <fieldset class="mt-1">
           <legend>Display</legend>
-          {< render_row(form.ability_end) >}
-          {< render_row(form.results_end) >}
-          {< render_row(form.record) >}
-          {< render_row(form.results_cont) >}
-          {< render_row(form.answer_cont) >}
+          <fieldset class="mt-1">
+            <legend>During test</legend>
+            {< render_row(form.results_cont) >}
+            {< render_row(form.answer_cont) >}
+          </fieldset>
+          <fieldset class="mt-1">
+            <legend>After test</legend>
+            {< render_row(form.ability_end) >}
+            {< render_row(form.results_end) >}
+            {< render_row(form.record) >}
+          </fieldset>
         </fieldset>
         <section class="field-row" class="mt-1" style="justify-content: flex-end">
           <input value="OK" type="submit">
