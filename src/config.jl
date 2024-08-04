@@ -127,7 +127,7 @@ const form = mk_form(
     NumberWidget(name="nitems", label="Number of items", default=10),
     CheckBoxWidget(name="ability_end", label="Display ability at end", default=true),
     CheckBoxWidget(name="results_end", label="Display results and predictions at end", default=true),
-    CheckBoxWidget(name="record", label="Record responses so trace can be show at end", default=false),
+    CheckBoxWidget(name="record", label="Record responses so trace can be show at end", default=true),
     CheckBoxWidget(name="results_cont", label="Display correct/incorrect during test", default=true),
     CheckBoxWidget(name="answer_cont", label="Display correct answer during test", default=false),
 )
