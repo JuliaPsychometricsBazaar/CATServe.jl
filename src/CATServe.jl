@@ -43,7 +43,9 @@ function update_templates()
     end
 end
 
-update_templates()
+function __init__()
+    update_templates()
+end
 
 #function __init__()
 @get "/" function index()
