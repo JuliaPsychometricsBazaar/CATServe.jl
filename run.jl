@@ -1,6 +1,6 @@
 @info "start"
 using Oxygen
-using CATServe
+using CATServe: CATServe
 @info "imports done"
 
-serve_cat(host=ARGS[1], port=parse(Int, ARGS[2]))
+CATServe.serve(host=ARGS[1], port=parse(Int, ARGS[2]))
