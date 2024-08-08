@@ -248,4 +248,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
 end
 =#
 
+staticfiles("static", "static")
+
 end
