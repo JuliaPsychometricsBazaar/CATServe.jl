@@ -34,7 +34,7 @@ function render_stacked(obj::NumberWidget)
       <label for="$( obj.name )">
         $( obj.label )
       </label>
-      <input type="number" name="$( obj.name )" value="$( obj.default )">
+      <input type="number" id="$( obj.name )" name="$( obj.name )" value="$( obj.default )">
     </div>
     """
 end
