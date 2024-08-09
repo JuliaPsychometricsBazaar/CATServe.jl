@@ -1,5 +1,6 @@
 module CATServe
 
+using Bonito
 using Oxygen
 @oxidise
 using Oxygen.Core: stream_handler
@@ -7,6 +8,8 @@ using HTTP
 using HTTP.WebSockets
 using HTTP.WebSockets: upgrade
 using JSON3
+using WGLMakie
+using Bonito: force_asset_server!, NoServer, force_connection!, NoConnection
 using ComputerAdaptiveTesting
 using ComputerAdaptiveTesting.Aggregators: PointAbilityEstimator
 using Random
@@ -16,7 +19,8 @@ using ComputerAdaptiveTesting.Responses
 using ComputerAdaptiveTesting.Aggregators: TrackedResponses, add_response!
 using ComputerAdaptiveTesting.Sim: NextItemError
 using FittedItemBanks: BooleanResponse
-using AdaptiveTestPlots: CatRecorder, lh_evolution_interactive
+using AdaptiveTestPlots: CatRecorder, lh_evolution_interactive, plot_item_bank
+using Requires
 
 export serve_cat
 
@@ -45,6 +49,9 @@ end
 
 function __init__()
     update_templates()
+
+    @info "Setting up Bonito to use Oxygen websockets"
+    @websocket "/bonito/{session_id}" Oxygen.bonito_websocket_handler
 end
 
 #function __init__()
@@ -77,6 +84,34 @@ end
 @get "/test-ws" function test_ws(req)
     # TODO return forbidden/upgrade required
     @info "middleware failed" req
+end
+
+@get "/inspect" function inspect(req)
+    params = queryparams(req)
+    parse = ParamParser(params)
+    datasets_parsed = parse(datasets)
+    if datasets_parsed === nothing
+        #send(ws, "<div id='info'>Error parsing datasets</div>")
+        return
+    end
+    item_bank, question_bank = datasets_parsed
+
+    WGLMakie.activate!()
+    force_asset_server!(NoServer())
+    force_connection!(Oxygen.OxygenWebSocketConnection(getexternalurl() * "/bonito/"))
+    app = App() do session::Session
+        plot_item_bank(
+            item_bank,
+            fig = Figure(size = (950, 1000)),
+            zero_symmetric = false,
+            include_outcome_toggles = true,
+            item_selection = :menu_with_all,
+            include_legend=false
+        )
+    end
+    app_html = sprint(io-> show(io, MIME"text/html"(), app))
+
+    return templates["inspect.html"](init=Dict("item_bank" => item_bank, "question_bank" => question_bank, "app_html" => app_html))
 end
 
 #end

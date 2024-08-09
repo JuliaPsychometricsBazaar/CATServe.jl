@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Inspecting Item Bank (Computer-Adaptive Test Demo){% endblock %}
+
+{% block extra_head %} {% endblock %}
+
+{% block main %}
+  <div class="window" style="margin: 32px; width: 1000px">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        Inspecting Item Bank: 
+      </div>
+
+      <div class="title-bar-controls">
+        <button aria-label="Minimize"></button>
+        <button aria-label="Maximize"></button>
+        <button aria-label="Close"></button>
+      </div>
+    </div>
+    <div class="window-body">
+      <div class="field-border" style="display: inline-block">
+        {{ app_html |> safe }}
+      </div>
+    </div>
+  </div>
+{% endblock %}

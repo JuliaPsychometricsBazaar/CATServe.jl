@@ -1,10 +1,11 @@
+using Bonito
 using Revise
 using Oxygen
 using CATServe: ws_handler, update_templates, CATServe
 
 function ReviseHandler(handle)
     req -> begin
-        if length(Revise.revision_queue) > 0
+        if !isempty(Revise.revision_queue)
             @time "Sync revision" Revise.revise()
         end
         invokelatest(handle, req)

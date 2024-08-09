@@ -1,6 +1,3 @@
-using WGLMakie
-using Bonito
-using Bonito: force_asset_server!, NoServer
 
 function safe_params(item_bank, idx)
     if hasmethod(item_params, Tuple{typeof(item_bank), typeof(idx)})
