@@ -1,5 +1,5 @@
-using Bonito
 using Revise
+using Bonito
 using Oxygen
 using CATServe: ws_handler, update_templates, CATServe
 

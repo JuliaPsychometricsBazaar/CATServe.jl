@@ -1,4 +1,5 @@
 @info "start"
+using Bonito
 using Oxygen
 using CATServe: CATServe
 @info "imports done"
