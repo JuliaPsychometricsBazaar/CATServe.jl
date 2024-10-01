@@ -30,7 +30,7 @@ include("./utils.jl")
 include("./summary.jl")
 include("./widgets.jl")
 include("./config.jl")
-include("./templates.jl")
+include("./snippets.jl")
 include("./inspect.jl")
 include("./middleware.jl")
 
