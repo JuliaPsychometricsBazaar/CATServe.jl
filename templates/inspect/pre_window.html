@@ -1,0 +1,29 @@
+  <script>
+  window.current_bonito_session_id = "{{ sid }}";
+  </script>
+  <div class="window" style="margin: 32px; width: 1000px">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        Inspecting Item Bank:
+      </div>
+
+      <div class="title-bar-controls">
+        <button aria-label="Minimize"></button>
+        <button aria-label="Maximize"></button>
+        <button aria-label="Close"></button>
+      </div>
+    </div>
+    <menu role="tablist">
+      <li role="tab" :aria-selected="true">
+        <a href="/inspect?test={{ test }}">
+          Inspect items
+        </a>
+      </li>
+      <li role="tab" :aria-selected="false">
+        <a href="/inspect/outcomes?test={{ test }}">
+          Inspect outcomes
+        </a>
+      </li>
+    </menu>
+    <div class="window" role="tabpanel">
+        <div class="window-body">

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Inspecting Item Bank (Computer-Adaptive Test Demo){% endblock %}
+
+{% block main %}
+  {% include "inspect/pre_window.html" %}
+  <form hx-get="/inspect/outcomes" hx-target="#plot-panel" hx-headers='js:{"Bonito-Session-ID": current_bonito_session_id}'>
+    <input type="hidden" name="test" value="{{ test }}">
+    <div style="display: flex; align-items: flex-start; padding-bottom: 1em">
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Unanswered</th>
+              <th>Correct</th>
+              <th>Incorrect</th>
+              <th>Preview</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td>
+                  item {{ item }}
+                </td>
+                <td>
+                  <input type="radio" id="item-{{ item }}-unanswered" name="item-{{ item }}" value="unanswered" checked><label for="item-{{ item }}-unanswered">🤷</label>
+                </td>
+                <td>
+                  <input type="radio" id="item-{{ item }}-correct" name="item-{{ item }}" value="correct"><label for="item-{{ item }}-correct">✔️</label>
+                </td>
+                <td>
+                  <input type="radio" id="item-{{ item }}-incorrect" name="item-{{ item }}" value="incorrect"><label for="item-{{ item }}-incorrect">❌</label>
+                </td>
+                <td>
+                  preview
+                </td>
+              </tr>
+            {% end %}
+        </table>
+      </div>
+      <div class="status-field-border" style="min-height: 200px; min-width: 300px; margin: 1em" id="preview-panel">
+
+      </div>
+      <div style="align-self: flex-end;">
+        <button onclick="history.back()">Back</button>
+        <button type="submit">Update</button>
+      </div>
+    </div>
+  </form>
+  <div class="field-border" class="dib" id="plot-panel">
+    {{ plot_html |> safe }}
+  </div>
+  {% include "inspect/post_window.html" %}
+{% endblock %}

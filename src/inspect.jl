@@ -1,3 +1,7 @@
+using PsychometricsBazaarBase.Integrators: Integrators
+using ComputerAdaptiveTesting.Aggregators
+using AdaptiveTestPlots: plot_likelihoods
+using ComputerAdaptiveTesting.NextItemRules: mirtcat_quadpts
 using Oxygen.Core.Util: redirect
 using Oxygen.Types: LazyRequest, headers
 using HTTP: HTTP
@@ -19,6 +23,26 @@ function get_bonito_session(context, session_id)
         end
     end
     return session
+end
+
+function htmx_bonito_helper(cb, req, app)
+    if is_htmx(req)
+        sid = HTTP.header(req.headers, "Bonito-Session-ID")
+        parent = get_bonito_session(CONTEXT[], sid)
+        if parent === nothing
+            @info "new parent"
+            app_html = sprint(io -> show(io, MIME"text/html"(), app))
+            new_parent_sid = app.session[].id
+            app_html *= "<script>window.current_bonito_session_id = \"$new_parent_sid\";</script>\n"
+        else
+            @info "old parent"
+            app_html = sprint(io -> show(io, MIME"text/html"(), app; parent=parent))
+        end
+        return app_html
+    else
+        app_html = sprint(io-> show(io, MIME"text/html"(), app))
+        return cb(app_html)
+    end
 end
 
 @get "/inspect" function inspect(req)
@@ -45,8 +69,7 @@ end
     force_asset_server!(NoServer())
     items = [parse(Int, value) for (name, value) in param_pairs if name == "item"]
     if isempty(items)
-        #items = eachindex(item_bank)
-        items = 1:4
+        items = eachindex(item_bank)
     end
     app = App() do session::Session
         plot_item_bank(
@@ -59,25 +82,63 @@ end
             items=items
         )
     end
-    if is_htmx(req)
-        sid = HTTP.header(req.headers, "Bonito-Session-ID")
-        parent = get_bonito_session(CONTEXT[], sid)
-        if parent === nothing
-            @info "new parent"
-            app_html = sprint(io -> show(io, MIME"text/html"(), app))
-            new_parent_sid = app.session[].id
-            app_html *= "<script>window.current_bonito_session_id = \"$new_parent_sid\";</script>\n"
-        else
-            @info "old parent"
-            app_html = sprint(io -> show(io, MIME"text/html"(), app; parent=parent))
-        end
-        return app_html
-    else
-        app_html = sprint(io-> show(io, MIME"text/html"(), app))
+    htmx_bonito_helper(req, app) do app_html
         items = eachindex(item_bank)
         sid = app.session[].id
 
-        return templates["inspect.html"](
+        return templates["inspect/inspect_items.html"](
+            init=Dict(
+                "sid" => sid,
+                "item_bank" => item_bank,
+                "question_bank" => question_bank,
+                "plot_html" => app_html,
+                "items" => items,
+                "test" => test
+            )
+        )
+    end
+end
+
+@get "/inspect/outcomes" function inspect_outcomes(req)
+    uri_parsed = URIs.URI(req.target)
+    params = URIs.queryparams(uri_parsed)
+    form_parse = ParamParser(params)
+    item_bank, question_bank = form_parse(datasets)
+    test = params["test"]
+
+    integrator = Integrators.even_grid(-6.0, 6.0, mirtcat_quadpts(1))
+    ability_integrator = AbilityIntegrator(integrator)
+    lh_ability_est = LikelihoodAbilityEstimator()
+    prior_ability_est = PriorAbilityEstimator(std_normal)
+    bare_responses = BareResponses(ResponseType(item_bank), Int[], Bool[])
+    for item in eachindex(item_bank)
+        @info "x" item
+        name = "item-$item"
+        if !(name in keys(params)) || params[name] == "unanswered"
+            continue
+        end
+        response = params[name] == "correct" ? true : false
+        add_response!(bare_responses, ComputerAdaptiveTesting.Responses.Response(ResponseType(item_bank), item, response))
+    end
+
+    tracked_responses = TrackedResponses(bare_responses, item_bank)
+    app = App() do session::Session
+        plot_likelihoods(
+            [
+                ("Likelihood", lh_ability_est),
+                ("Prior", prior_ability_est),
+            ],
+            tracked_responses,
+            ability_integrator,
+            -6:0.1:6,
+        )
+    end
+
+    htmx_bonito_helper(req, app) do app_html
+        sid = app.session[].id
+        items = eachindex(item_bank)
+
+        return templates["inspect/inspect_outcomes.html"](
             init=Dict(
                 "sid" => sid,
                 "item_bank" => item_bank,
