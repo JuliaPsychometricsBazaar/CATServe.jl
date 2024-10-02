@@ -38,14 +38,21 @@ const TEMPLATE_DIR::String = dirname(Base.source_path()) * "/../templates/"
 templates::Dict{String, Any} = Dict()
 
 function update_templates()
-    for fn in readdir(TEMPLATE_DIR)
-        path = TEMPLATE_DIR * fn
-        if !(isfile(path) && endswith(fn, ".html"))
-            continue
+    for (root, dirs, files) in walkdir(TEMPLATE_DIR)
+        @info "update_templates" root dirs files
+        for fn in files
+            if !endswith(fn, ".html")
+                continue
+            end
+            if occursin("base", fn)
+                continue
+            end
+            full_path = joinpath(root, fn)
+            path = full_path[length(TEMPLATE_DIR) + 1:end]
+            @info "compiling" full_path path
+            template_compiled = otera(full_path; config=Dict("dir" => TEMPLATE_DIR))
+            templates[path] = template_compiled
         end
-        @info "xx" path
-        template_compiled = otera(path; config=Dict("dir" => TEMPLATE_DIR))
-        templates[fn] = template_compiled
     end
 end
 
