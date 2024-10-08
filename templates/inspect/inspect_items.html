@@ -1,9 +1,8 @@
-{% extends "base.html" %}
+{% extends "inspect/base.html" %}
 
 {% block title %}Inspecting Item Bank (Computer-Adaptive Test Demo){% endblock %}
 
-{% block main %}
-  {% include "inspect/pre_window.html" %}
+{% block window_body %}
   <form hx-get="/inspect" hx-target="#plot-panel" hx-headers='js:{"Bonito-Session-ID": current_bonito_session_id}'>
     <input type="hidden" name="test" value="{{ test }}">
     <div style="display: flex; align-items: flex-start; padding-bottom: 1em">
@@ -42,5 +41,4 @@
   <div class="field-border" class="dib" id="plot-panel">
     {{ plot_html |> safe }}
   </div>
-  {% include "inspect/post_window.html" %}
 {% endblock %}
