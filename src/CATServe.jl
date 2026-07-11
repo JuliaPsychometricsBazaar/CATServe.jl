@@ -25,7 +25,7 @@ using PrecompileTools
 end
 
 include("./CATServer.jl")
-using .CATServer: serve, ws_handler, update_templates, CATServer, FlamegraphMiddleware
-export serve, ws_handler, update_templates, CATServer, FlamegraphMiddleware
+using .CATServer: serve, ws_handler, update_templates, CATServer, FlamegraphMiddleware, PrintStacktraceMiddleware
+export serve, ws_handler, update_templates, CATServer, FlamegraphMiddleware, PrintStacktraceMiddleware
 
 end

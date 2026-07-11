@@ -31,16 +31,16 @@ function htmx_bonito_helper(cb, req, app)
         parent = get_bonito_session(CONTEXT[], sid)
         if parent === nothing
             @info "new parent"
-            app_html = sprint(io -> show(io, MIME"text/html"(), app))
+            app_html = sprint(io -> show_html(io, app))
             new_parent_sid = app.session[].id
             app_html *= "<script>window.current_bonito_session_id = \"$new_parent_sid\";</script>\n"
         else
             @info "old parent"
-            app_html = sprint(io -> show(io, MIME"text/html"(), app; parent=parent))
+            app_html = sprint(io -> show_html(io, app; parent=parent))
         end
         return app_html
     else
-        app_html = sprint(io-> show(io, MIME"text/html"(), app))
+        app_html = sprint(io-> show_html(io, app))
         return cb(app_html)
     end
 end
@@ -54,16 +54,12 @@ end
         return redirect("/inspect?test=" * test)
     end
     form_parse = ParamParser(params)
-    datasets_parsed = form_parse(datasets)
+    datasets_parsed = form_parse(datasets_select)
     if datasets_parsed === nothing
         #send(ws, "<div id='info'>Error parsing datasets</div>")
         return
     end
     item_bank, question_bank = datasets_parsed
-    if haskey(params, "item")
-        @info "params" params
-        @info "item" params["item"]
-    end
 
     WGLMakie.activate!()
     force_asset_server!(NoServer())
@@ -103,7 +99,7 @@ end
     uri_parsed = URIs.URI(req.target)
     params = URIs.queryparams(uri_parsed)
     form_parse = ParamParser(params)
-    item_bank, question_bank = form_parse(datasets)
+    item_bank, question_bank = form_parse(datasets_select)
     test = params["test"]
 
     integrator = Integrators.even_grid(-6.0, 6.0, mirtcat_quadpts(1))
@@ -112,7 +108,6 @@ end
     prior_ability_est = PriorAbilityEstimator(std_normal)
     bare_responses = BareResponses(ResponseType(item_bank), Int[], Bool[])
     for item in eachindex(item_bank)
-        @info "x" item
         name = "item-$item"
         if !(name in keys(params)) || params[name] == "unanswered"
             continue
@@ -130,7 +125,8 @@ end
             ],
             tracked_responses,
             ability_integrator,
-            -6:0.1:6,
+            -6:0.1:6;
+            fig = Figure(size = (950, 1000))
         )
     end
 
@@ -154,14 +150,14 @@ end
 @get "/preview" function preview(req)
     params = queryparams(req)
     parser = ParamParser(params)
-    datasets_parsed = parser(datasets)
+    datasets_parsed = parser(datasets_select)
     if datasets_parsed === nothing
         return
     end
     item_bank, question_bank = datasets_parsed
     question_html = prompt_html(question_bank[parse(Int, params["item"])])
     is_hx = is_htmx(req)
-    template_path = is_hx ? "preview_snip.html" : "preview.html"
+    template_path = is_hx ? "inspect/preview_snip.html" : "inspect/preview.html"
     return templates[template_path](
         init=Dict(
             "question_html" => question_html,

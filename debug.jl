@@ -1,7 +1,7 @@
 using Revise
 #using Bonito
 #using Oxygen
-using CATServe: ws_handler, update_templates, serve, FlamegraphMiddleware
+using CATServe: ws_handler, update_templates, serve, FlamegraphMiddleware, PrintStacktraceMiddleware
 using Profile
 
 
@@ -21,7 +21,7 @@ end
 profilesvg_kwargs = (; maxframes=20000, maxdepth=200, width=1080, height=5000, C=true)
 #middleware = FlamegraphMiddleware(profilesvg_kwargs=profilesvg_kwargs)
 # middleware=[ReviseHandler, middleware]
-serve(; host="127.0.0.1", port=8001, handler=ws_handler, middleware=[ReviseHandler], async=true)
+serve(; host="127.0.0.1", port=8001, handler=ws_handler, middleware=[ReviseHandler, PrintStacktraceMiddleware], async=true)
 key = Revise.add_callback(["templates"]) do
     @info "Starting template update"
     @time "Template update" invokelatest(update_templates)

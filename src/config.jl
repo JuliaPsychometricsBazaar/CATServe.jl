@@ -1,21 +1,31 @@
 using ItemResponseDatasets: VocabIQ
 using RIrtWrappers.Mirt: fit_4pl
 using ComputerAdaptiveTesting.Aggregators: LikelihoodAbilityEstimator, PriorAbilityEstimator, MeanAbilityEstimator, ModeAbilityEstimator, AbilityOptimizer
-using ComputerAdaptiveTesting.NextItemRules: ItemStrategyNextItemRule, ExhaustiveSearch1Ply, ExpectationBasedItemCriterion, AbilityVarianceStateCriterion
-using ComputerAdaptiveTesting.TerminationConditions: FixedItemsTerminationCondition
+using ComputerAdaptiveTesting.NextItemRules: ItemCriterionRule, ExhaustiveSearch1Ply, ExpectationBasedItemCriterion, AbilityVariance
+using ComputerAdaptiveTesting.TerminationConditions: FixedLength
 using PsychometricsBazaarBase.Integrators: QuadGKIntegrator, FixedGKIntegrator, even_grid
 using PsychometricsBazaarBase.Optimizers: NelderMead, OneDimOptimOptimizer
 using FittedItemBanks.DummyData: std_normal
 using Serialization
+using Glob
+
+function load_datasets()
+    result = Dict()
+    for fn in readdir(glob"*.jls", datasets_dir)
+        result[fn] = deserialize(fn)
+    end
+    return result
+end
 
 const datasets_dir = "datasets"
+const datasets = load_datasets()
 
-const datasets = SelectWidget(
+const datasets_select = SelectWidget(
     name="test",
     label="Datasets",
     options=[
-        (name="VocabIQ 4PL 1-dimensional", value="vocabiq_4pl_1d", get=() -> deserialize(datasets_dir * "/vocabiq_4pl_1d.jls")),
-        (name="VocabIQ Kernel-Smoothing IRT", value="vocabiq_ksirt", get=() -> deserialize(datasets_dir * "/vocabiq_ksirt.jls")),
+        (name=dataset.name, value=dataset.value, get=() -> dataset)
+        for dataset in values(datasets)
     ]
 )
 
@@ -73,11 +83,11 @@ const next_item_rules = SelectWidget(
             value="mepv",
             get=(
                 (ability_estimator, dist_ability_estimator, integrator, optimizer) ->
-                ItemStrategyNextItemRule(
+                ItemCriterionRule(
                     ExhaustiveSearch1Ply(false),
                     ExpectationBasedItemCriterion(
                         ability_estimator,
-                        AbilityVarianceStateCriterion(dist_ability_estimator, integrator)
+                        AbilityVariance(dist_ability_estimator, integrator)
                     )
                 )
             )
@@ -87,7 +97,7 @@ const next_item_rules = SelectWidget(
             value="mfi",
             get=(
                 (ability_estimator, dist_ability_estimator, integrator, optimizer) ->
-                ItemStrategyNextItemRule(
+                ItemCriterionRule(
                     ExhaustiveSearch1Ply(false),
                     InformationItemCriterion(dist_ability_estimator, optimizer)
                 )
@@ -103,7 +113,7 @@ const termination_conditions = SelectWidget(
         (
             name="Fixed items",
             value="fixeditems",
-            get=(n_items -> FixedItemsTerminationCondition(n_items))
+            get=(n_items -> FixedLength(n_items))
         )
     ]
 )
@@ -113,7 +123,7 @@ function mk_form(args...)
 end
 
 const form = mk_form(
-    datasets,
+    datasets_select,
     ability_estimation_distribution,
     ability_estimation,
     NumberWidget(name="lower_bound", label="Integrator / optimizer lower bound", default=-6.0),

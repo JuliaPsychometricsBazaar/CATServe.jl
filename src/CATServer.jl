@@ -39,7 +39,6 @@ templates::Dict{String, Any} = Dict()
 
 function update_templates()
     for (root, dirs, files) in walkdir(TEMPLATE_DIR)
-        @info "update_templates" root dirs files
         for fn in files
             if !endswith(fn, ".html")
                 continue
@@ -49,7 +48,6 @@ function update_templates()
             end
             full_path = joinpath(root, fn)
             path = full_path[length(TEMPLATE_DIR) + 1:end]
-            @info "compiling" full_path path
             template_compiled = otera(full_path; config=Dict("dir" => TEMPLATE_DIR))
             templates[path] = template_compiled
         end
@@ -71,7 +69,7 @@ end
             "render_row" => render_row,
             "form" => form,
             "render_options" => render_options,
-            "datasets" => datasets,
+            "datasets" => datasets_select,
             "ability_estimation_distribution" => ability_estimation_distribution,
             "ability_estimation" => ability_estimation,
             "ability_tracker" => ability_tracker,
@@ -113,7 +111,7 @@ function parse_cat_rules(parse)
     ComputerAdaptiveTesting.CatRules(full_abilest, next_item_rule, termination_condition)
 end
 
-function question_progress(question_idx, termination_condition::FixedItemsTerminationCondition)
+function question_progress(question_idx, termination_condition::FixedLength)
     "$(question_idx)/$(termination_condition.num_items)"
 end
 
@@ -123,7 +121,7 @@ end
 
 format_response(::BooleanResponse, value) = value ? "Correct" : "Incorrect"
 
-max_responses(item_bank, termination_condition::FixedItemsTerminationCondition) = termination_condition.num_items
+max_responses(item_bank, termination_condition::FixedLength) = termination_condition.num_items
 max_responses(item_bank, termination_condition) = length(item_bank)
 
 function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)

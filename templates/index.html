@@ -24,13 +24,7 @@
         <fieldset>
           <legend>Test selection</legend>
           <select name="test">
-            <optgroup label="Synthetic">
-              <option>Guassian generator</option>
-              <option>Clumpy generator</option>
-            </optgroup>
-            <optgroup label="Datasets">
-              {< render_options(datasets) >}
-            </optgroup>
+            {< render_options(datasets) >}
           </select>
           <button type="submit" formaction="/inspect">Inspect item bank</button>
         </fieldset>
