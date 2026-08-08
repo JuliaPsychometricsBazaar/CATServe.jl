@@ -19,7 +19,26 @@ function response(content::String, status=200, headers=[]) :: HTTP.Response
     return HTTP.Response(status, headers, content)
 end
 
-export otera
+export otera, register_template_filter
+
+# OteraEngine now requires template variables keyed by Symbol
+symbolize_init(init) = init
+symbolize_init(init::AbstractDict{<:AbstractString}) = Dict(Symbol(k) => v for (k, v) in init)
+
+# OteraEngine no longer supports function calls inside expression blocks
+# ({{ f(x) }} parses as a super() block), so rendering helpers are exposed to
+# templates as filters: {{ x |> f }}. Must be registered before the Template
+# referencing them is compiled.
+function register_template_filter(name::String, f; raw_html::Bool=true)
+    # Filters are looked up as symbols in the OteraEngine module (this is
+    # what OteraEngine.@filter does too), so bind the function there.
+    # Filters emitting HTML return a SafeString so autoescape passes the
+    # markup through untouched.
+    sym = Symbol(name)
+    wrapped = raw_html ? (args...) -> OteraEngine.SafeString(f(args...)) : f
+    Core.eval(OteraEngine, Expr(:(=), sym, wrapped))
+    OteraEngine.filters_alias[name] = sym
+end
 
 """
     otera(template::String; kwargs...)
@@ -53,10 +72,10 @@ function otera(template::String; mime_type=nothing, kwargs...)
     return function(;tmp_init=nothing, jl_init=nothing, status=200, headers=[], template_kwargs...)
         combined_kwargs = Dict{Symbol, Any}(template_kwargs)
         if tmp_init !== nothing
-            combined_kwargs[:tmp_init] = tmp_init
+            combined_kwargs[:tmp_init] = symbolize_init(tmp_init)
         end
         if jl_init !== nothing
-            combined_kwargs[:jl_init] = jl_init
+            combined_kwargs[:jl_init] = symbolize_init(jl_init)
         end
         content = tmp(; combined_kwargs...)
         resp_headers = mime_is_known ? [["Content-Type" => mime_type]; headers] : headers
@@ -82,7 +101,7 @@ function otera(file::IO; mime_type=nothing, kwargs...)
 
     return function(;init=nothing, status=200, headers=[], template_kwargs...)
         combined_kwargs = Dict{Symbol, Any}(template_kwargs)
-        content = tmp(; init=init, combined_kwargs...)
+        content = tmp(; init=symbolize_init(init), combined_kwargs...)
         resp_headers = mime_is_known ? [["Content-Type" => mime_type]; headers] : headers
         response(content, status, resp_headers)
     end

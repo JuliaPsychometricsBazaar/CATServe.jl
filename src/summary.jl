@@ -56,12 +56,15 @@ end
 
 function get_playback(question_bank, ability_estimator, tracked, display_prefs; recorder)
     WGLMakie.activate!()
-    force_asset_server!(NoServer())
     app = App() do session::Session
-        lh_evolution_interactive(recorder)
+        summary_plot(recorder)
     end
-    app_html = sprint(io-> show(io, MIME"text/html"(), app))
-    return app_html
+    # Rendered inside the CAT websocket handler, outside any HTTP request
+    # scope, so bring the Bonnie context into scope explicitly; the fragment
+    # becomes a self-contained root session with its own websocket.
+    return Bonnie.with_bonnie(BONNIE[].context) do
+        Bonnie.app_html(app)
+    end
 end
 
 
@@ -106,6 +109,8 @@ function result_summary(question_bank, ability_estimator, tracked, display_prefs
         </div>
     """
 end
+
+summarise_task(task::AbstractString) = task
 
 function summarise_task(task::PromptedTask)
     "[$(typeof(task.task))] Correct: $(join(task.task.correct, ", ")); Incorrect: $(join(task.task.incorrect, ", ")) $(task.prompt)"

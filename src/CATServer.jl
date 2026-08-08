@@ -2,30 +2,31 @@ module CATServer
 
 using Bonito
 using Oxygen
-@oxidise
-using Oxygen.Core: stream_handler
+@oxidize
 using HTTP
 using HTTP.WebSockets
-using HTTP.WebSockets: upgrade
+using HTTP.WebSockets: send, receive
 using JSON3
 using WGLMakie
-using Bonito: force_asset_server!, NoServer
+using Bonnie
+using PsychometricsBazaarBase
 using ComputerAdaptiveTesting
 using ComputerAdaptiveTesting.Aggregators: PointAbilityEstimator
 using Random
 using ItemResponseDatasets: SelectMultipleExact, SelectMultiplePartial, SelectMultiple, PromptedTask, answers
 using FittedItemBanks: ResponseType, item_params
 using ComputerAdaptiveTesting.Responses
-using ComputerAdaptiveTesting.Aggregators: TrackedResponses, add_response!
-using ComputerAdaptiveTesting.Sim: NextItemError
+using ComputerAdaptiveTesting.Responses: add_response!
+using ComputerAdaptiveTesting.Aggregators: TrackedResponses, AbilityIntegrator
+using ComputerAdaptiveTesting.Sim: NextItemError, record!
+using ComputerAdaptiveTesting.NextItemRules: best_item
 using FittedItemBanks: BooleanResponse
-using AdaptiveTestPlots: CatRecorder, lh_evolution_interactive, plot_item_bank
-using Requires
+using AdaptiveTestPlots: CatRecorder, summary_plot, plot_item_bank
 
 export serve_cat
 
 include("./otera.jl")
-using .OteraEngineTemplating: otera
+using .OteraEngineTemplating: otera, register_template_filter
 include("./utils.jl")
 include("./summary.jl")
 include("./widgets.jl")
@@ -38,6 +39,9 @@ const TEMPLATE_DIR::String = dirname(Base.source_path()) * "/../templates/"
 templates::Dict{String, Any} = Dict()
 
 function update_templates()
+    register_template_filter("render_stacked", render_stacked)
+    register_template_filter("render_row", render_row)
+    register_template_filter("render_options", render_options)
     for (root, dirs, files) in walkdir(TEMPLATE_DIR)
         for fn in files
             if !endswith(fn, ".html")
@@ -54,11 +58,14 @@ function update_templates()
     end
 end
 
+const BONNIE = Ref{Any}(nothing)
+
 function __init__()
     update_templates()
+    init_config()
 
-    @info "Setting up Bonito to use Oxygen websockets"
-    Oxygen.setup_bonito_connection(CONTEXT[]; setup_all=true)
+    @info "Setting up Bonnie to serve Bonito through Oxygen"
+    BONNIE[] = Bonnie.setup!(Val(:oxygen); app=@__MODULE__)
 end
 
 #function __init__()
@@ -86,11 +93,6 @@ end
     @info "test" queryparams(req) query
 
     return templates["test.html"](init=Dict("query" => query))
-end
-
-@get "/test-ws" function test_ws(req)
-    # TODO return forbidden/upgrade required
-    @info "middleware failed" req
 end
 
 #end
@@ -132,12 +134,16 @@ function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)
         ability_tracker
     )
     if display_prefs.record
-        xs = range(-2.5, 2.5, length=100)
-        integrator = QuadGKIntegrator(-6.0, 6.0, 7)
-        dist_ability_est = PriorAbilityEstimator(std_normal)
+        xs = collect(range(-2.5, 2.5, length=100))
+        integrator = AbilityIntegrator(QuadGKIntegrator(lo=-6.0, hi=6.0, order=7))
+        dist_ability_est = PosteriorAbilityEstimator(std_normal)
         ability_estimator = MeanAbilityEstimator(dist_ability_est, integrator)
         raw_estimator = LikelihoodAbilityEstimator()
-        recorder = CatRecorder(xs, max_responses(item_bank, termination_condition), integrator, raw_estimator, ability_estimator)
+        recorder = CatRecorder(0, max_responses(item_bank, termination_condition);
+            posterior_dist=(type=:ability_distribution, estimator=dist_ability_est, integrator=integrator, points=xs),
+            raw_dist=(type=:ability_distribution, estimator=raw_estimator, integrator=integrator, points=xs),
+            ability=(type=:ability, estimator=ability_estimator),
+        )
     else
         recorder = nothing
     end
@@ -147,10 +153,10 @@ function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)
     while true
         local next_index
         try
-            next_index = next_item(responses, item_bank)
+            next_index = best_item(next_item, responses, item_bank)
         catch exc
             if isa(exc, NextItemError)
-                @warn "Terminating early due to error getting next item" err=sprint(showerror, e)
+                @warn "Terminating early due to error getting next item" err=sprint(showerror, exc)
                 break
             else
                 rethrow()
@@ -168,7 +174,7 @@ function run_cat_ws(ws, rules, item_bank, question_bank, display_prefs)
         add_response!(responses, ComputerAdaptiveTesting.Responses.Response(response_type, next_index, response))
         terminating = termination_condition(responses, item_bank)
         if recorder !== nothing
-            recorder(responses, 1, terminating)
+            record!(recorder, responses)
         end
         if terminating
             @info "Met termination condition"
@@ -209,6 +215,24 @@ function prompt_ws(ws, task::SelectMultiplePartial)
     resp = iterate(ws)
 end
 
+# Dummy datasets carry bare strings as questions: show the question text and
+# let the tester decide the (boolean) outcome themselves.
+function prompt_ws(ws, question::AbstractString)
+    send(ws, prompt_html(question))
+    resp_str = receive(ws)
+    resp = JSON3.read(resp_str)
+    return resp[:action] == "Answer"
+end
+
+function prompt_html(question::AbstractString)
+    return """
+        <div id="question">$(question)</div>
+        <div id="response">
+            $(submit_cancel_buttons)
+        </div>
+    """
+end
+
 function prompt_html(task::PromptedTask)
     return (
         "<div id='question'>" * task.prompt * "</div>" *
@@ -230,11 +254,11 @@ function prompt_html(task::SelectMultiplePartial)
 end
 
 function handle_ws(ws)
-    params = queryparams(ws.request)
+    params = queryparams(ws.handshake_request)
     log(msg) = send(ws, "<div id='info'>" * msg * "</div>")
     #descget = mk_descget(params)
     parse = ParamParser(params)
-    datasets_parsed = parse(datasets)
+    datasets_parsed = parse(datasets_select)
     if datasets_parsed === nothing
         send(ws, "<div id='info'>Error parsing datasets</div>")
         return
@@ -251,31 +275,13 @@ function handle_ws(ws)
     run_cat_ws(ws, cat_rules, dataset, question_bank, display_prefs)
 end
 
-function ws_handler(middleware::Function)
-    inner = stream_handler(middleware)
-    (stream::HTTP.Stream) -> begin
-        path = HTTP.URI(stream.message.target).path
-        if (
-            HTTP.WebSockets.is_upgrade(stream.message) &&
-            path == "/test-ws" &&
-            stream.message.method == "GET"
-        )
-            HTTP.WebSockets.upgrade((args...; kwargs...) -> Base.invokelatest(handle_ws, args...; kwargs...), stream)
-        else
-            inner(stream)
-        end
-    end
+@websocket "/test-ws" function test_ws(ws::WebSocket)
+    handle_ws(ws)
 end
 
-#=
-function serve_cat(; kwargs...)
-    serve(middleware=[], handler=ws_handler; kwargs...)
+function serve_cat(; middleware=[], kwargs...)
+    serve(; middleware=[BONNIE[].middleware, middleware...], kwargs...)
 end
-
-if abspath(PROGRAM_FILE) == @__FILE__
-    serve_cat()
-end
-=#
 
 staticfiles("static", "static")
 

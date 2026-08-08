@@ -24,7 +24,7 @@
         <fieldset>
           <legend>Test selection</legend>
           <select name="test">
-            {< render_options(datasets) >}
+            {{ datasets |> render_options }}
           </select>
           <button type="submit" formaction="/inspect">Inspect item bank</button>
         </fieldset>
@@ -32,44 +32,44 @@
           <legend>CAT Procedure</legend>
           <fieldset>
             <legend>Ability estimation</legend>
-            {< render_stacked(ability_estimation_distribution) >}
-            {< render_stacked(ability_estimation) >}
-            {< render_stacked(form.lower_bound) >}
-            {< render_stacked(form.upper_bound) >}
-            {< render_stacked(integrators) >}
+            {{ ability_estimation_distribution |> render_stacked }}
+            {{ ability_estimation |> render_stacked }}
+            {{ form.lower_bound |> render_stacked }}
+            {{ form.upper_bound |> render_stacked }}
+            {{ integrators |> render_stacked }}
             <div class="field-row-stacked" x-show="f.integrator == 'evengrid'">
               <label for="abiltrack">
                 Ability tracker
               </label>
               <select name="abiltrack">
-                {< render_options(ability_tracker) >}
+                {{ ability_tracker |> render_options }}
               </select>
             </div>
-            {< render_stacked(form.integrator_order) >}
-            {< render_stacked(optimizers) >}
+            {{ form.integrator_order |> render_stacked }}
+            {{ optimizers |> render_stacked }}
           </fieldset>
           <fieldset class="mt-1">
             <legend>Next item</legend>
-            {< render_stacked(next_item_rules) >}
+            {{ next_item_rules |> render_stacked }}
           </fieldset>
           <fieldset class="mt-1">
             <legend>Termination</legend>
-            {< render_stacked(termination_conditions) >}
-            {< render_stacked(form.nitems) >}
+            {{ termination_conditions |> render_stacked }}
+            {{ form.nitems |> render_stacked }}
           </fieldset>
         </fieldset>
         <fieldset class="mt-1">
           <legend>Display</legend>
           <fieldset class="mt-1">
             <legend>During test</legend>
-            {< render_row(form.results_cont) >}
-            {< render_row(form.answer_cont) >}
+            {{ form.results_cont |> render_row }}
+            {{ form.answer_cont |> render_row }}
           </fieldset>
           <fieldset class="mt-1">
             <legend>After test</legend>
-            {< render_row(form.ability_end) >}
-            {< render_row(form.results_end) >}
-            {< render_row(form.record) >}
+            {{ form.ability_end |> render_row }}
+            {{ form.results_end |> render_row }}
+            {{ form.record |> render_row }}
           </fieldset>
         </fieldset>
         <section class="field-row" class="mt-1" style="justify-content: flex-end">

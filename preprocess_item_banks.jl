@@ -89,15 +89,6 @@ end
         )
         @yield model_info
     end
-    rng = Random.default_rng(42)
-    item_bank = dummy_item_bank(rng, MonopolyItemBank)
-    model_info = (;
-        model=item_bank,
-        questions=["Question $n" for n in 1:num_questions],
-        name="8-item dummy " * spec_description_short(spec),
-        value="dummy8_" * spec_description_slug(spec),
-        description="Eight item dummy dataset. Model: " * spec_description_long(spec)
-    )
 end
 
 function main(outdir)
