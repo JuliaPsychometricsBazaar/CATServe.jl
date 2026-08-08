@@ -1,5 +1,3 @@
-using ItemResponseDatasets: VocabIQ
-using RIrtWrappers.Mirt: fit_4pl
 using ComputerAdaptiveTesting.Aggregators: LikelihoodAbilityEstimator, PosteriorAbilityEstimator, MeanAbilityEstimator, ModeAbilityEstimator, AbilityOptimizer
 using ComputerAdaptiveTesting.NextItemRules: ItemCriterionRule, ExhaustiveSearch, ExpectationBasedItemCriterion, AbilityVariance, InformationItemCriterion
 using ComputerAdaptiveTesting.TerminationConditions: FixedLength
