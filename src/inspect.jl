@@ -1,47 +1,50 @@
 using PsychometricsBazaarBase.Integrators: Integrators
 using ComputerAdaptiveTesting.Aggregators
 using AdaptiveTestPlots: plot_likelihoods
-using ComputerAdaptiveTesting.NextItemRules: mirtcat_quadpts
-using Oxygen.Core.Util: redirect
-using Oxygen.Types: LazyRequest, headers
+using ComputerAdaptiveTesting.Compat.MirtCAT: mirtcat_quadpts
+using Oxygen: redirect
 using HTTP: HTTP
 import URIs
 
 function is_htmx(req)
-    meta = headers(LazyRequest(request=req))
-    return haskey(meta, "HX-Request")
+    return HTTP.hasheader(req, "HX-Request")
 end
 
-function get_bonito_session(context, session_id)
+function get_bonito_session(session_id)
     @info "getting" session_id
-    bonito_context = context.ext[:bonito_connection]
-    local session = nothing
-    @lock bonito_context.lock begin
-        @info "open sessions" collect(keys(bonito_context.open_connections))
-        if session_id in keys(bonito_context.open_connections)
-            session = bonito_context.open_connections[session_id]
-        end
-    end
-    return session
+    return Bonnie.lookup(BONNIE[].context.sessions, session_id)
+end
+
+# The id of the root session created for this request's page, which owns the
+# page's websocket. Fragments rendered for later htmx requests attach to it
+# via the Bonito-Session-ID header.
+current_root_session_id() = Bonnie.CURRENT_PAGE[].root.id
+
+function render_subsession_html(parent, app)
+    sub = Bonito.Session(parent)
+    dom = Bonito.session_dom(sub, app)
+    html = sprint(io -> show(io, MIME"text/html"(), dom))
+    Bonito.mark_displayed!(sub)
+    return html
 end
 
 function htmx_bonito_helper(cb, req, app)
     if is_htmx(req)
-        sid = HTTP.header(req.headers, "Bonito-Session-ID")
-        parent = get_bonito_session(CONTEXT[], sid)
+        sid = HTTP.header(req, "Bonito-Session-ID", "")
+        parent = isempty(sid) ? nothing : get_bonito_session(sid)
         if parent === nothing
             @info "new parent"
-            app_html = sprint(io -> show_html(io, app))
-            new_parent_sid = app.session[].id
+            app_html = Bonnie.app_html(app)
+            new_parent_sid = current_root_session_id()
             app_html *= "<script>window.current_bonito_session_id = \"$new_parent_sid\";</script>\n"
         else
             @info "old parent"
-            app_html = sprint(io -> show_html(io, app; parent=parent))
+            app_html = render_subsession_html(parent, app)
         end
         return app_html
     else
-        app_html = sprint(io-> show_html(io, app))
-        return cb(app_html)
+        app_html = Bonnie.app_html(app)
+        return cb(app_html, current_root_session_id())
     end
 end
 
@@ -62,7 +65,6 @@ end
     item_bank, question_bank = datasets_parsed
 
     WGLMakie.activate!()
-    force_asset_server!(NoServer())
     items = [parse(Int, value) for (name, value) in param_pairs if name == "item"]
     if isempty(items)
         items = eachindex(item_bank)
@@ -78,9 +80,8 @@ end
             items=items
         )
     end
-    htmx_bonito_helper(req, app) do app_html
+    htmx_bonito_helper(req, app) do app_html, sid
         items = eachindex(item_bank)
-        sid = app.session[].id
 
         return templates["inspect/inspect_items.html"](
             init=Dict(
@@ -105,7 +106,7 @@ end
     integrator = Integrators.even_grid(-6.0, 6.0, mirtcat_quadpts(1))
     ability_integrator = AbilityIntegrator(integrator)
     lh_ability_est = LikelihoodAbilityEstimator()
-    prior_ability_est = PriorAbilityEstimator(std_normal)
+    prior_ability_est = PosteriorAbilityEstimator(std_normal)
     bare_responses = BareResponses(ResponseType(item_bank), Int[], Bool[])
     for item in eachindex(item_bank)
         name = "item-$item"
@@ -130,8 +131,7 @@ end
         )
     end
 
-    htmx_bonito_helper(req, app) do app_html
-        sid = app.session[].id
+    htmx_bonito_helper(req, app) do app_html, sid
         items = eachindex(item_bank)
 
         return templates["inspect/inspect_outcomes.html"](

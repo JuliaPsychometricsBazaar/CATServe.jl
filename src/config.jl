@@ -1,7 +1,5 @@
-using ItemResponseDatasets: VocabIQ
-using RIrtWrappers.Mirt: fit_4pl
-using ComputerAdaptiveTesting.Aggregators: LikelihoodAbilityEstimator, PriorAbilityEstimator, MeanAbilityEstimator, ModeAbilityEstimator, AbilityOptimizer
-using ComputerAdaptiveTesting.NextItemRules: ItemCriterionRule, ExhaustiveSearch1Ply, ExpectationBasedItemCriterion, AbilityVariance
+using ComputerAdaptiveTesting.Aggregators: LikelihoodAbilityEstimator, PosteriorAbilityEstimator, MeanAbilityEstimator, ModeAbilityEstimator, AbilityOptimizer
+using ComputerAdaptiveTesting.NextItemRules: ItemCriterionRule, ExhaustiveSearch, ExpectationBasedItemCriterion, AbilityVariance, InformationItemCriterion
 using ComputerAdaptiveTesting.TerminationConditions: FixedLength
 using PsychometricsBazaarBase.Integrators: QuadGKIntegrator, FixedGKIntegrator, even_grid
 using PsychometricsBazaarBase.Optimizers: NelderMead, OneDimOptimOptimizer
@@ -18,23 +16,48 @@ function load_datasets()
 end
 
 const datasets_dir = "datasets"
-const datasets = load_datasets()
+# Filled in by init_config() at runtime: loading serialized datasets during
+# precompilation would bake in the precompile worker's filesystem state.
+datasets::Dict{String, Any} = Dict()
+datasets_select::SelectWidget = SelectWidget(name="test", label="Datasets", options=[])
 
-const datasets_select = SelectWidget(
-    name="test",
-    label="Datasets",
-    options=[
-        (name=dataset.name, value=dataset.value, get=() -> dataset)
-        for dataset in values(datasets)
-    ]
-)
+function init_config()
+    global datasets = load_datasets()
+    global datasets_select = SelectWidget(
+        name="test",
+        label="Datasets",
+        options=[
+            (name=dataset.name, value=dataset.value, get=() -> dataset)
+            for dataset in values(datasets)
+        ]
+    )
+    global form = mk_form(
+        datasets_select,
+        ability_estimation_distribution,
+        ability_estimation,
+        NumberWidget(name="lower_bound", label="Integrator / optimizer lower bound", default=-6.0),
+        NumberWidget(name="upper_bound", label="Integrator / optimizer upper bound", default=6.0),
+        integrators,
+        NumberWidget(name="integrator_order", label="Integrator order", default=39),
+        #ability_tracker,
+        optimizers,
+        next_item_rules,
+        termination_conditions,
+        NumberWidget(name="nitems", label="Number of items", default=10),
+        CheckBoxWidget(name="ability_end", label="Display ability at end", default=true),
+        CheckBoxWidget(name="results_end", label="Display results and predictions at end", default=true),
+        CheckBoxWidget(name="record", label="Record responses so trace can be show at end", default=true),
+        CheckBoxWidget(name="results_cont", label="Display correct/incorrect during test", default=true),
+        CheckBoxWidget(name="answer_cont", label="Display correct answer during test", default=false),
+    )
+end
 
 const ability_estimation_distribution = SelectWidget(
     name="abildist",
     label="Distribution",
     options=[
         (name="Likelihood", value="likelihood", get=() -> LikelihoodAbilityEstimator()),
-        (name="Posterior", value="posterior", get=() -> PriorAbilityEstimator(std_normal))
+        (name="Posterior", value="posterior", get=() -> PosteriorAbilityEstimator(std_normal))
     ]
 )
 
@@ -51,7 +74,7 @@ const integrators = SelectWidget(
     name="integrator",
     label="Integrator",
     options=[
-        (name="QuadGK", value="quadgk", get=(lo, hi, order) -> QuadGKIntegrator(lo, hi, order)),
+        (name="QuadGK", value="quadgk", get=(lo, hi, order) -> QuadGKIntegrator(lo=lo, hi=hi, order=order)),
         (name="FixedGK", value="fixedgk", get=(lo, hi, order) -> FixedGKIntegrator(lo, hi, order)),
         (name="even_grid", value="evengrid", get=(lo, hi, order) -> even_grid(lo, hi, order)),
     ]
@@ -84,7 +107,7 @@ const next_item_rules = SelectWidget(
             get=(
                 (ability_estimator, dist_ability_estimator, integrator, optimizer) ->
                 ItemCriterionRule(
-                    ExhaustiveSearch1Ply(false),
+                    ExhaustiveSearch(),
                     ExpectationBasedItemCriterion(
                         ability_estimator,
                         AbilityVariance(dist_ability_estimator, integrator)
@@ -98,7 +121,7 @@ const next_item_rules = SelectWidget(
             get=(
                 (ability_estimator, dist_ability_estimator, integrator, optimizer) ->
                 ItemCriterionRule(
-                    ExhaustiveSearch1Ply(false),
+                    ExhaustiveSearch(),
                     InformationItemCriterion(dist_ability_estimator, optimizer)
                 )
             )
@@ -122,22 +145,4 @@ function mk_form(args...)
     (; zip(Symbol.([arg.name for arg in args]), args)...)
 end
 
-const form = mk_form(
-    datasets_select,
-    ability_estimation_distribution,
-    ability_estimation,
-    NumberWidget(name="lower_bound", label="Integrator / optimizer lower bound", default=-6.0),
-    NumberWidget(name="upper_bound", label="Integrator / optimizer upper bound", default=6.0),
-    integrators,
-    NumberWidget(name="integrator_order", label="Integrator order", default=39),
-    #ability_tracker,
-    optimizers,
-    next_item_rules,
-    termination_conditions,
-    NumberWidget(name="nitems", label="Number of items", default=10),
-    CheckBoxWidget(name="ability_end", label="Display ability at end", default=true),
-    CheckBoxWidget(name="results_end", label="Display results and predictions at end", default=true),
-    CheckBoxWidget(name="record", label="Record responses so trace can be show at end", default=true),
-    CheckBoxWidget(name="results_cont", label="Display correct/incorrect during test", default=true),
-    CheckBoxWidget(name="answer_cont", label="Display correct answer during test", default=false),
-)
+form = nothing

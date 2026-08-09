@@ -1,6 +1,3 @@
-using ItemResponseDatasets: VocabIQ, MGKT
-using RIrtWrappers.Mirt: Mirt
-using RIrtWrappers.KernSmoothIRT: KernSmoothIRT
 using Serialization
 using Base.Filesystem
 using ResumableFunctions
@@ -8,6 +5,22 @@ using FittedItemBanks
 using FittedItemBanks.DummyData
 using FittedItemBanks: iterate_simple_item_bank_specs
 using Random: Random
+
+# The vocabiq/mgkt item banks are fitted through R (RIrtWrappers -> RCall),
+# which needs an R install carrying mirt/KernSmoothIRT (see
+# setup_rcondapkg.jl). The dummy8 banks are pure Julia, so only pull R in when
+# a dataset that actually needs it was asked for -- that is what lets CI (and
+# the test suite) generate dummy8 with no R present.
+const R_DATASETS = ("vocabiq", "mgkt")
+needs_r() = isempty(ARGS) || ARGS[1] in R_DATASETS
+
+if needs_r()
+    @eval begin
+        using ItemResponseDatasets: VocabIQ, MGKT
+        using RIrtWrappers.Mirt: Mirt
+        using RIrtWrappers.KernSmoothIRT: KernSmoothIRT
+    end
+end
 
 
 function vocabiq_4pl_1d()
@@ -89,15 +102,6 @@ end
         )
         @yield model_info
     end
-    rng = Random.default_rng(42)
-    item_bank = dummy_item_bank(rng, MonopolyItemBank)
-    model_info = (;
-        model=item_bank,
-        questions=["Question $n" for n in 1:num_questions],
-        name="8-item dummy " * spec_description_short(spec),
-        value="dummy8_" * spec_description_slug(spec),
-        description="Eight item dummy dataset. Model: " * spec_description_long(spec)
-    )
 end
 
 function main(outdir)
