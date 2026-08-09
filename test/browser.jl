@@ -7,6 +7,10 @@ using Playwright
 # Which engine to drive: chromium (default) or firefox.
 e2e_browser() = Symbol(get(ENV, "CATSERVE_E2E_BROWSER", "chromium"))
 
+# Firefox's `--headless` disables WebGL; xvfb plus headless=false gives it a
+# software GL stack via mesa. Chromium keeps SwiftShader either way.
+e2e_headless() = get(ENV, "CATSERVE_E2E_HEADLESS", "true") != "false"
+
 # How long an action or an assertion may take before it is a failure. Set once
 # on the context, so every locator, expect and retry_until inherits it.
 e2e_timeout() = parse(Int, get(ENV, "CATSERVE_E2E_TIMEOUT", "15000"))
@@ -35,7 +39,7 @@ Playwright driver down afterwards, exception or not.
 """
 function with_browser(f)
     playwright() do pw
-        browser = launch(getfield(pw, e2e_browser()); headless = true, LAUNCH_OPTIONS...)
+        browser = launch(getfield(pw, e2e_browser()); headless = e2e_headless(), LAUNCH_OPTIONS...)
         try
             f(browser)
         finally

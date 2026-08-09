@@ -51,16 +51,33 @@ jobs:
             "$RUNNER_TEMP/playwright-julia"
           julia "$RUNNER_TEMP/playwright-julia/bin/install.jl" ${{ matrix.browser }}
 
+      - name: Install xvfb (firefox WebGL under a virtual display)
+        # Firefox's `--headless` is hit-or-miss for WebGL — sometimes it
+        # reports a WebGL context but paints only a flat background, which is
+        # just what the pixel assertions guard against. Running headed against
+        # a virtual X server lets Mesa's software GL stack take the whole path
+        # through. Chromium's `--headless` ships SwiftShader and needs none of
+        # this.
+        if: matrix.browser == 'firefox'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
+
       # The item banks are not in the repository. dummy8 is pure Julia, so this
       # needs no R install (unlike the vocabiq/mgkt datasets).
       - name: Generate the dummy8 item banks
         run: julia --project=. preprocess_item_banks.jl dummy8
 
-      - uses: julia-actions/julia-runtest@v1
-        with:
-          # Nothing consumes the coverage data, and instrumenting a suite this
-          # heavy is not free.
-          coverage: false
+      # Firefox runs headed under xvfb so its WebGL stack works; chromium runs
+      # headless as before. Pkg.test() runs directly because xvfb-run must
+      # wrap the julia process itself, which the julia-runtest action cannot
+      # do. Coverage stays off: nothing consumes it, and instrumenting a suite
+      # this heavy is not free.
+      - name: Run the e2e tests
+        run: |
+          if [ "$CATSERVE_E2E_BROWSER" = "firefox" ]; then
+            CATSERVE_E2E_HEADLESS=false xvfb-run -a julia --project=. -e 'using Pkg; Pkg.test()'
+          else
+            julia --project=. -e 'using Pkg; Pkg.test()'
+          fi
         env:
           CATSERVE_E2E_BROWSER: ${{ matrix.browser }}
           CATSERVE_E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
