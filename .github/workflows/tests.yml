@@ -1,0 +1,74 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # End-to-end browser tests: a real CATServe server driven through Playwright.
+  # Both engines run -- Firefox is the lane that can see the slow-script kill
+  # of WGLMakie's first frame, which Chromium cannot.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+
+      - name: Cache Playwright browsers
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.playwright
+          # Keyed on the driver version, so a Playwright bump invalidates the
+          # cache instead of restoring browsers the new driver cannot use.
+          key: playwright-${{ runner.os }}-1.61.1-${{ matrix.browser }}
+
+      - uses: julia-actions/julia-buildpkg@v1
+
+      # Playwright.jl is a test-only dependency, so it is not loadable outside
+      # Pkg.test(); bin/install.jl is the standalone entry point and activates
+      # its own checkout. Only the engine this job drives is downloaded.
+      - name: Install Playwright driver and browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/frankier/playwright-julia \
+            "$RUNNER_TEMP/playwright-julia"
+          julia "$RUNNER_TEMP/playwright-julia/bin/install.jl" ${{ matrix.browser }}
+
+      # The item banks are not in the repository. dummy8 is pure Julia, so this
+      # needs no R install (unlike the vocabiq/mgkt datasets).
+      - name: Generate the dummy8 item banks
+        run: julia --project=. preprocess_item_banks.jl dummy8
+
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          # Nothing consumes the coverage data, and instrumenting a suite this
+          # heavy is not free.
+          coverage: false
+        env:
+          CATSERVE_E2E_BROWSER: ${{ matrix.browser }}
+          CATSERVE_E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts-${{ matrix.browser }}
+          path: e2e-artifacts/
+          if-no-files-found: ignore
