@@ -38,10 +38,25 @@ WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 [sources]
 Bonnie = {url = "https://github.com/frankier/Bonnie.jl"}
 Oxygen = {url = "https://github.com/frankier/Oxygen.jl", rev = "http-2"}
+# Browser driver for the end-to-end suite (test-only); not registered yet.
+Playwright = {url = "https://github.com/frankier/playwright-julia"}
 
 [compat]
 Bonito = "5.1"
 HTTP = "2.4"
 Oxygen = "1.10"
+PNGFiles = "0.4"
+Playwright = "0.1"
 Profile = "1"
+Sockets = "1"
+Test = "1"
 URIs = "1.5.1"
+
+[extras]
+PNGFiles = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
+Playwright = "d777c63b-3b21-49c6-865f-99d0e068a423"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["PNGFiles", "Playwright", "Sockets", "Test"]
